@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study App - セキュアWeb設計士試験学習</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="navbar-brand">
+                <h1>📚 Study App</h1>
+            </div>
+            <div class="navbar-menu">
+                <button id="homeBtn" class="nav-btn active">ホーム</button>
+                <button id="statsBtn" class="nav-btn">統計</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <!-- ホーム画面 -->
+        <section id="homeScreen" class="screen active">
+            <h1>セキュアWebアプリケーション設計士試験</h1>
+            <p class="subtitle">自作問題で学習進捗・理解度を可視化する学習環境</p>
+            
+            <div id="examList" class="exam-grid">
+                <div class="loading">試験を読込中...</div>
+            </div>
+        </section>
+
+        <!-- クイズ画面 -->
+        <section id="quizScreen" class="screen">
+            <div class="quiz-header">
+                <button id="backBtn" class="back-btn">← 戻る</button>
+                <h1 id="examTitle"></h1>
+            </div>
+            
+            <div id="statsCard" class="stats-card"></div>
+            
+            <div id="questionList" class="question-grid"></div>
+        </section>
+
+        <!-- 統計画面 -->
+        <section id="statsScreen" class="screen">
+            <h1>学習統計</h1>
+            <p class="subtitle">試験別の正答率と分野別の弱点を確認できます</p>
+            
+            <div id="examStats" class="stats-grid">
+                <div class="loading">統計を読込中...</div>
+            </div>
+        </section>
+
+        <!-- エラー表示 -->
+        <div id="errorContainer" class="error-container"></div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Study App - セキュアWeb設計士試験対策</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
