@@ -106,13 +106,23 @@ h1 {
 }
 
 .exam-card {
+    display: block;
+    width: 100%;
+    text-align: left;
     background: white;
+    border: none;
     border-radius: 8px;
     padding: 1.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     transition: all 0.3s ease;
     border-left: 4px solid #0066cc;
+    font-family: inherit;
+}
+
+.exam-card:focus {
+    outline: 2px solid #0066cc;
+    outline-offset: 2px;
 }
 
 .exam-card:hover {
@@ -227,9 +237,93 @@ h1 {
     font-size: 1rem;
 }
 
-.option-btn:hover {
+.option-btn:hover:not(:disabled) {
     background-color: #f0f7ff;
     border-color: #0066cc;
+}
+
+.option-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.option-btn.answered.correct {
+    background-color: #e6f7ed;
+    border-color: #28a745;
+}
+
+.option-btn.answered.incorrect {
+    background-color: #fde8e8;
+    border-color: #dc3545;
+}
+
+.feedback {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+}
+
+.feedback-correct {
+    background-color: #e6f7ed;
+    color: #28a745;
+}
+
+.feedback-incorrect {
+    background-color: #fde8e8;
+    color: #dc3545;
+}
+
+.quiz-progress {
+    margin-bottom: 2rem;
+}
+
+.quiz-progress-label {
+    color: #999;
+    font-size: 0.9rem;
+}
+
+.progress-bar {
+    background: #eee;
+    height: 4px;
+    border-radius: 2px;
+    margin-top: 0.5rem;
+}
+
+.progress-bar-fill {
+    background: #0066cc;
+    height: 100%;
+    border-radius: 2px;
+}
+
+.next-btn {
+    margin-top: 1rem;
+}
+
+.quiz-complete {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quiz-complete h2 {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+}
+
+.quiz-complete p {
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.quiz-complete-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 .explanation {
@@ -312,6 +406,171 @@ h1 {
     font-size: 1.2rem;
     font-weight: 600;
     color: #0066cc;
+}
+
+.tag-stats-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.tag-stats-heading {
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 0.75rem;
+}
+
+.tag-stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.tag-stats-table th,
+.tag-stats-table td {
+    padding: 0.4rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.tag-stats-table th {
+    color: #666;
+    font-weight: 600;
+}
+
+.tag-stats-empty {
+    font-size: 0.85rem;
+    color: #999;
+}
+
+/* ==================== Admin Screen ==================== */
+
+.admin-actions {
+    margin-bottom: 1.5rem;
+}
+
+.admin-forms {
+    display: grid;
+    gap: 2rem;
+}
+
+.admin-form {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.admin-form h2 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: #0066cc;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 0.3rem;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: 2px solid #0066cc;
+    border-color: #0066cc;
+}
+
+.tag-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.tag-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.hint-text {
+    font-size: 0.85rem;
+    color: #999;
+}
+
+.form-msg {
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.form-msg.success {
+    color: #28a745;
+}
+
+.form-msg.error {
+    color: #dc3545;
+}
+
+.btn-primary {
+    padding: 0.6rem 1.2rem;
+    background: #0066cc;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background: #0052a3;
+}
+
+.btn-secondary {
+    padding: 0.6rem 1.2rem;
+    background: #ddd;
+    color: #333;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #ccc;
+}
+
+.empty-state,
+.error-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem;
+}
+
+.empty-state {
+    color: #999;
+}
+
+.error-state {
+    color: #c00;
 }
 
 /* ==================== Footer ==================== */

@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 
-from app.routers import exam, question, answer, stats
+from app.routers import exam, question, answer, stats, tag
 from app.config import CORS_ORIGINS
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
@@ -33,6 +33,7 @@ app.include_router(exam.router, prefix="/exams", tags=["Exam"])
 app.include_router(question.router, prefix="/questions", tags=["Question"])
 app.include_router(answer.router, prefix="/answers", tags=["Answer"])
 app.include_router(stats.router, prefix="/stats", tags=["Stats"])
+app.include_router(tag.router, prefix="/tags", tags=["Tag"])
 
 
 def _inject_api_config(html: str) -> str:

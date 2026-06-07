@@ -1,65 +1,138 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study App</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <header>
-        <nav class="navbar">
-            <div class="navbar-brand">
-                <h1>📚 Study App</h1>
-            </div>
-            <div class="navbar-menu">
-                <button id="homeBtn" class="nav-btn active">ホーム</button>
-                <button id="statsBtn" class="nav-btn">統計</button>
-            </div>
-        </nav>
-    </header>
-
-    <main class="container">
-        <!-- ホーム画面 -->
-        <section id="homeScreen" class="screen active">
-            <h1>試験選択画面</h1>
-            <p class="subtitle">自作問題で学習進捗・理解度を可視化する学習環境</p>
-            
-            <div id="examList" class="exam-grid">
-                <div class="loading">試験を読込中...</div>
-            </div>
-        </section>
-
-        <!-- クイズ画面 -->
-        <section id="quizScreen" class="screen">
-            <div class="quiz-header">
-                <button id="backBtn" class="back-btn">← 戻る</button>
-                <h1 id="examTitle"></h1>
-            </div>
-            
-            <div id="statsCard" class="stats-card"></div>
-            
-            <div id="questionList" class="question-grid"></div>
-        </section>
-
-        <!-- 統計画面 -->
-        <section id="statsScreen" class="screen">
-            <h1>学習統計</h1>
-            <p class="subtitle">試験別の正答率と分野別の弱点を確認できます</p>
-            
-            <div id="examStats" class="stats-grid">
-                <div class="loading">統計を読込中...</div>
-            </div>
-        </section>
-
-        <!-- エラー表示 -->
-        <div id="errorContainer" class="error-container"></div>
-    </main>
-
-    <footer>
-        <p>&copy; 2026 Study App - セキュアWeb設計士試験対策</p>
-    </footer>
-
-    <script src="app.js"></script>
-</body>
-</html>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study App</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar" aria-label="メインナビゲーション">
+            <div class="navbar-brand">
+                <h1>📚 Study App</h1>
+            </div>
+            <div class="navbar-menu">
+                <button id="homeBtn" class="nav-btn active">ホーム</button>
+                <button id="statsBtn" class="nav-btn">統計</button>
+                <button id="adminBtn" class="nav-btn">管理</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <!-- ホーム画面 -->
+        <section id="homeScreen" class="screen active">
+            <h1>試験選択画面</h1>
+            <p class="subtitle">自作問題で学習進捗・理解度を可視化する学習環境</p>
+            
+            <div id="examList" class="exam-grid">
+                <div class="loading">試験を読込中...</div>
+            </div>
+        </section>
+
+        <!-- クイズ画面 -->
+        <section id="quizScreen" class="screen">
+            <div class="quiz-header">
+                <button id="backBtn" class="back-btn">← 戻る</button>
+                <h1 id="examTitle"></h1>
+            </div>
+            
+            <div id="statsCard" class="stats-card"></div>
+            
+            <div id="questionList" class="question-grid"></div>
+        </section>
+
+        <!-- 統計画面 -->
+        <section id="statsScreen" class="screen">
+            <h1>学習統計</h1>
+            <p class="subtitle">試験別の正答率と分野別の弱点を確認できます</p>
+            
+            <div id="examStats" class="stats-grid">
+                <div class="loading">統計を読込中...</div>
+            </div>
+        </section>
+
+        <!-- 管理画面 -->
+        <section id="adminScreen" class="screen">
+            <h1>コンテンツ管理</h1>
+            <p class="subtitle">試験・タグ・問題を作成できます</p>
+
+            <div class="admin-actions">
+                <button id="refreshExamsBtn" type="button" class="btn-secondary">一覧を更新</button>
+            </div>
+
+            <div class="admin-forms">
+                <form id="examForm" class="admin-form">
+                    <h2>試験作成</h2>
+                    <div class="form-group">
+                        <label for="examTitleInput">タイトル</label>
+                        <input type="text" id="examTitleInput" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="examDescInput">説明（任意）</label>
+                        <textarea id="examDescInput" rows="2"></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">試験を作成</button>
+                    <p id="examFormMsg" class="form-msg" aria-live="polite"></p>
+                </form>
+
+                <form id="tagForm" class="admin-form">
+                    <h2>タグ作成</h2>
+                    <div class="form-group">
+                        <label for="tagExamSelect">試験</label>
+                        <select id="tagExamSelect" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tagNameInput">タグ名</label>
+                        <input type="text" id="tagNameInput" required>
+                    </div>
+                    <button type="submit" class="btn-primary">タグを作成</button>
+                    <p id="tagFormMsg" class="form-msg" aria-live="polite"></p>
+                </form>
+
+                <form id="questionForm" class="admin-form">
+                    <h2>問題作成</h2>
+                    <div class="form-group">
+                        <label for="questionExamSelect">試験</label>
+                        <select id="questionExamSelect" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="questionTitleInput">問題文</label>
+                        <textarea id="questionTitleInput" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="questionChoicesInput">選択肢（1行1択）</label>
+                        <textarea id="questionChoicesInput" rows="4" required placeholder="選択肢A&#10;選択肢B&#10;選択肢C"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="questionCorrectInput">正答（選択肢のテキストと一致させる）</label>
+                        <input type="text" id="questionCorrectInput" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="questionExplanationInput">解説</label>
+                        <textarea id="questionExplanationInput" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>タグ（任意）</label>
+                        <div id="questionTagCheckboxes" class="tag-checkboxes">
+                            <p class="hint-text">試験を選択するとタグが表示されます</p>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary">問題を作成</button>
+                    <p id="questionFormMsg" class="form-msg" aria-live="polite"></p>
+                </form>
+            </div>
+        </section>
+
+        <!-- エラー表示 -->
+        <div id="errorContainer" class="error-container" role="alert" aria-live="polite"></div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Study App - セキュアWeb設計士試験対策</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

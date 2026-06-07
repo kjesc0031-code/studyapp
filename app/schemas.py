@@ -20,6 +20,24 @@ class ExamRead(ExamBase):
 		from_attributes = True
 
 
+class TagBase(BaseModel):
+	exam_id: int
+	name: str
+	description: Optional[str] = None
+
+
+class TagCreate(TagBase):
+	pass
+
+
+class TagRead(TagBase):
+	id: int
+	created_at: datetime
+
+	class Config:
+		from_attributes = True
+
+
 class QuestionBase(BaseModel):
 	exam_id: int
 	title: str
@@ -30,39 +48,41 @@ class QuestionBase(BaseModel):
 
 
 class QuestionCreate(QuestionBase):
-	pass
+	tag_ids: Optional[List[int]] = []
 
 
 class QuestionRead(QuestionBase):
 	id: int
 	created_at: datetime
+	tags: List[TagRead] = []
 
 	class Config:
 		from_attributes = True
 
+
 class AnswerCreate(BaseModel):
-    question_id: int
-    is_correct: bool
+	question_id: int
+	selected_answer: str
 
 
 class AnswerRead(BaseModel):
-    id: int
-    question_id: int
-    is_correct: bool
-    answered_at: datetime
+	id: int
+	question_id: int
+	is_correct: bool
+	answered_at: datetime
 
-    class Config:
-        from_attributes = True
+	class Config:
+		from_attributes = True
 
 
 class OverallStats(BaseModel):
-    total: int
-    correct: int
-    accuracy: float
+	total: int
+	correct: int
+	accuracy: float
 
 
 class TagStats(BaseModel):
-    tag: str
-    total: int
-    correct: int
-    accuracy: float
+	tag: str
+	total: int
+	correct: int
+	accuracy: float
