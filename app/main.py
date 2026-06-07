@@ -31,6 +31,14 @@ app.include_router(stats.router, prefix="/stats", tags=["Stats"])
 
 # 開発用エントリポイント
 if __name__ == "__main__":
+	import sys
+	import os
+	from pathlib import Path
+	
+	# プロジェクトルートをPythonパスに追加
+	project_root = Path(__file__).parent.parent
+	sys.path.insert(0, str(project_root))
+	
 	import uvicorn
 	from app.config import API_HOST, API_PORT, RELOAD
 	uvicorn.run("app.main:app", host=API_HOST, port=API_PORT, reload=RELOAD)

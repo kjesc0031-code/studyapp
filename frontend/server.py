@@ -7,7 +7,13 @@ Serves static files with environment variable injection.
 import http.server
 import socketserver
 import os
+import sys
 from pathlib import Path
+
+# プロジェクトルートをPythonパスに追加
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
 from app.config import FRONTEND_SERVER_PORT, FRONTEND_API_BASE_URL
 
 PORT = FRONTEND_SERVER_PORT
