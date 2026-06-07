@@ -2,11 +2,16 @@
 FastAPI entry point for the study app.
 """
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import get_db
+from fastapi.responses import FileResponse, HTMLResponse
+
 from app.routers import exam, question, answer, stats
 from app.config import CORS_ORIGINS
+
+FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
 app = FastAPI(
 	title="Study App",
@@ -29,16 +34,28 @@ app.include_router(question.router, prefix="/questions", tags=["Question"])
 app.include_router(answer.router, prefix="/answers", tags=["Answer"])
 app.include_router(stats.router, prefix="/stats", tags=["Stats"])
 
-# 開発用エントリポイント
-if __name__ == "__main__":
-	import sys
-	import os
-	from pathlib import Path
-	
-	# プロジェクトルートをPythonパスに追加
-	project_root = Path(__file__).parent.parent
-	sys.path.insert(0, str(project_root))
-	
-	import uvicorn
-	from app.config import API_HOST, API_PORT, RELOAD
-	uvicorn.run("app.main:app", host=API_HOST, port=API_PORT, reload=RELOAD)
+
+def _inject_api_config(html: str) -> str:
+	"""同一オリジンで API を呼び出すための設定を index.html に注入する。"""
+	injection = """    <script>
+        window.API_BASE_URL = "";
+    </script>"""
+	return html.replace("</head>", injection + "\n</head>")
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/index.html", response_class=HTMLResponse, include_in_schema=False)
+async def serve_frontend_index() -> str:
+	content = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+	return _inject_api_config(content)
+
+
+# CSS / JS など静的ファイル（"/" マウントは API ルートと競合するため個別に配信）
+@app.get("/app.js", include_in_schema=False)
+async def serve_app_js() -> FileResponse:
+	return FileResponse(FRONTEND_DIR / "app.js", media_type="application/javascript")
+
+
+@app.get("/styles.css", include_in_schema=False)
+async def serve_styles_css() -> FileResponse:
+	return FileResponse(FRONTEND_DIR / "styles.css", media_type="text/css")

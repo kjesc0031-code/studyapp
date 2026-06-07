@@ -54,9 +54,8 @@
 
 ### 前提条件
 - Python 3.9 以上
-- Node.js (フロントエンドサーバー補助用)
 
-### バックエンド（FastAPI）セットアップ
+### セットアップ
 
 1. **リポジトリクローン＆依存パッケージのインストール**
    ```bash
@@ -87,24 +86,29 @@
    FRONTEND_API_BASE_URL=http://localhost:8080
    ```
 
-3. **バックエンドサーバー起動**
-   ```bash
-   python app/main.py
-   # または uvicorn を直接実行
-   uvicorn app.main:app --host 127.0.0.1 --port 8080 --reload
-   ```
+### アプリ起動（1コマンド）
 
-   → API ドキュメント: `http://localhost:8080/docs`
+プロジェクトルートで以下のいずれかを実行するだけで、API とフロントエンドが同時に起動します。
 
-### フロントエンド（Vanilla JavaScript）セットアップ
+```bash
+python run.py
+```
 
-1. **フロントエンドサーバー起動**
-   ```bash
-   cd frontend
-   python server.py
-   ```
+Windows では `start.bat` をダブルクリック、または PowerShell で `.\start.ps1` でも起動できます。
 
-   → ブラウザで `http://localhost:3000` にアクセス
+- アプリ: `http://localhost:8080`（ブラウザが自動で開きます）
+- API ドキュメント: `http://localhost:8080/docs`
+
+### 別ポートでフロントエンドを動かす場合（任意）
+
+フロントエンドだけ別プロセスで起動したい場合:
+
+```bash
+cd frontend
+python server.py
+```
+
+→ `http://localhost:3000` にアクセス（API は `http://localhost:8080` で別途起動が必要）
 
 ### 本番環境での注意事項
 

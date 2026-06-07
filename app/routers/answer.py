@@ -13,7 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 router = APIRouter()
 
-@router.post("/answers", response_model=schemas.AnswerRead)
+@router.post("/", response_model=schemas.AnswerRead)
 def create_answer(answer: schemas.AnswerCreate, db: Session = Depends(get_db)):
     """
     Create a new answer history record.

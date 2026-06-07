@@ -10,8 +10,10 @@
 
 // ==================== Configuration ====================
 
-// 環境変数から読み込み、またはデフォルト値を使用
-const API_BASE_URL = window.API_BASE_URL || "http://localhost:8080"; // Backend API endpoint
+// 環境変数から読み込み。空文字は同一オリジン用なので || ではなく ?? を使う
+const API_BASE_URL = window.API_BASE_URL ?? (
+    window.location.protocol === "file:" ? "http://localhost:8080" : ""
+);
 
 // ==================== DOM Elements ====================
 
@@ -95,7 +97,7 @@ function showError(message) {
 
 async function fetchExams() {
     try {
-        const res = await fetch(`${API_BASE_URL}/exams`);
+        const res = await fetch(`${API_BASE_URL}/exams/`);
         if (!res.ok) throw new Error(`Failed to fetch exams: ${res.statusText}`);
         return await res.json();
     } catch (error) {
@@ -106,7 +108,7 @@ async function fetchExams() {
 
 async function fetchQuestions(examId) {
     try {
-        const res = await fetch(`${API_BASE_URL}/questions?exam_id=${examId}`);
+        const res = await fetch(`${API_BASE_URL}/questions/?exam_id=${examId}`);
         if (!res.ok) throw new Error(`Failed to fetch questions: ${res.statusText}`);
         return await res.json();
     } catch (error) {
@@ -152,7 +154,7 @@ async function fetchTagStats(examId) {
 
 async function submitAnswer(questionId, isCorrect) {
     try {
-        const res = await fetch(`${API_BASE_URL}/answers`, {
+        const res = await fetch(`${API_BASE_URL}/answers/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question_id: questionId, is_correct: isCorrect }),

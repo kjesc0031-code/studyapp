@@ -43,7 +43,7 @@ RELOAD: bool = os.getenv(
 # コンマ区切りでオリジンを指定、またはJSON形式のリスト
 _cors_origins_str = os.getenv(
     "CORS_ORIGINS",
-    "http://localhost:3000"
+    "http://localhost:3000;http://localhost:8080;http://127.0.0.1:8080"
 )
 
 # カンマまたはスペースで区切られた文字列をリストに変換
