@@ -31,9 +31,11 @@ const errorContainer = document.getElementById('errorContainer');
 const examForm = document.getElementById('examForm');
 const tagForm = document.getElementById('tagForm');
 const questionForm = document.getElementById('questionForm');
+const csvImportForm = document.getElementById('csvImportForm');
 const refreshExamsBtn = document.getElementById('refreshExamsBtn');
 const tagExamSelect = document.getElementById('tagExamSelect');
 const questionExamSelect = document.getElementById('questionExamSelect');
+const csvExamSelect = document.getElementById('csvExamSelect');
 const questionTagCheckboxes = document.getElementById('questionTagCheckboxes');
 
 // ==================== State Management ====================
@@ -233,6 +235,16 @@ async function createQuestion(payload) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+    });
+}
+
+async function importQuestionsCsv(examId, file) {
+    const formData = new FormData();
+    formData.append('exam_id', String(examId));
+    formData.append('file', file);
+    return apiFetch(`${API_BASE_URL}/questions/import`, {
+        method: 'POST',
+        body: formData,
     });
 }
 
@@ -512,7 +524,7 @@ async function loadExamStats() {
 
 async function loadAdminExamSelects() {
     const result = await fetchExams();
-    const selects = [tagExamSelect, questionExamSelect];
+    const selects = [tagExamSelect, questionExamSelect, csvExamSelect];
 
     if (!result.ok) {
         selects.forEach(sel => {
@@ -639,6 +651,70 @@ questionForm.addEventListener('submit', async (e) => {
         await loadQuestionTagCheckboxes(examId);
     } else {
         showFormMsg(msgEl, `作成に失敗しました: ${result.error}`, false);
+    }
+});
+
+function renderImportResult(container, data) {
+    const parts = [`<p><strong>${data.imported}件</strong>を登録しました。`];
+    if (data.failed > 0) {
+        parts.push(` <strong>${data.failed}件</strong>は失敗しました。</p>`);
+    } else {
+        parts.push('</p>');
+    }
+
+    if (data.created_tags && data.created_tags.length > 0) {
+        parts.push(`<p class="hint-text">新規タグ: ${data.created_tags.map(escapeHtml).join(', ')}</p>`);
+    }
+
+    if (data.errors && data.errors.length > 0) {
+        parts.push('<ul class="import-error-list">');
+        data.errors.forEach(err => {
+            parts.push(`<li>行 ${err.row}: ${escapeHtml(err.message)}</li>`);
+        });
+        parts.push('</ul>');
+    }
+
+    container.innerHTML = parts.join('');
+    container.hidden = false;
+}
+
+csvImportForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msgEl = document.getElementById('csvImportFormMsg');
+    const resultEl = document.getElementById('csvImportResult');
+    const examId = parseInt(csvExamSelect.value, 10);
+    const fileInput = document.getElementById('csvFileInput');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        showFormMsg(msgEl, 'CSVファイルを選択してください', false);
+        return;
+    }
+
+    resultEl.hidden = true;
+    resultEl.innerHTML = '';
+    showFormMsg(msgEl, 'インポート中...', true);
+
+    const result = await importQuestionsCsv(examId, file);
+    if (result.ok) {
+        const data = result.data;
+        const hasErrors = data.failed > 0;
+        showFormMsg(
+            msgEl,
+            hasErrors
+                ? `${data.imported}件登録、${data.failed}件失敗`
+                : `${data.imported}件の問題を登録しました`,
+            !hasErrors || data.imported > 0
+        );
+        renderImportResult(resultEl, data);
+        if (data.imported > 0) {
+            csvImportForm.reset();
+            if (parseInt(questionExamSelect.value, 10) === examId) {
+                await loadQuestionTagCheckboxes(examId);
+            }
+        }
+    } else {
+        showFormMsg(msgEl, `インポートに失敗しました: ${result.error}`, false);
     }
 });
 

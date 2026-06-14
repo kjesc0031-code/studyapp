@@ -60,6 +60,18 @@ class QuestionRead(QuestionBase):
 		from_attributes = True
 
 
+class ImportRowError(BaseModel):
+	row: int
+	message: str
+
+
+class QuestionImportResult(BaseModel):
+	imported: int
+	failed: int
+	errors: List[ImportRowError]
+	created_tags: List[str] = []
+
+
 class AnswerCreate(BaseModel):
 	question_id: int
 	selected_answer: str
