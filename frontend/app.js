@@ -37,6 +37,12 @@ const tagExamSelect = document.getElementById('tagExamSelect');
 const questionExamSelect = document.getElementById('questionExamSelect');
 const csvExamSelect = document.getElementById('csvExamSelect');
 const questionTagCheckboxes = document.getElementById('questionTagCheckboxes');
+const deleteExamList = document.getElementById('deleteExamList');
+const deleteExamMsg = document.getElementById('deleteExamMsg');
+const deleteExamModal = document.getElementById('deleteExamModal');
+const deleteExamModalBody = document.getElementById('deleteExamModalBody');
+const deleteExamCancelBtn = document.getElementById('deleteExamCancelBtn');
+const deleteExamConfirmBtn = document.getElementById('deleteExamConfirmBtn');
 
 // ==================== State Management ====================
 
@@ -45,6 +51,7 @@ let currentExams = [];
 let currentQuestions = [];
 let currentQuestionIndex = 0;
 let answeredQuestions = new Set();
+let pendingDeleteExam = null;
 
 // ==================== Navigation ====================
 
@@ -222,6 +229,12 @@ async function createExam(title, description) {
     });
 }
 
+async function deleteExam(examId) {
+    return apiFetch(`${API_BASE_URL}/exams/${examId}`, {
+        method: 'DELETE',
+    });
+}
+
 async function createTag(examId, name) {
     return apiFetch(`${API_BASE_URL}/tags/`, {
         method: 'POST',
@@ -344,6 +357,7 @@ function renderCurrentQuestion() {
         </div>
 
         <div class="question-card">
+            ${q.description ? `<div class="question-context">${escapeHtml(q.description)}</div>` : ''}
             <div class="question-text">${escapeHtml(q.title)}</div>
 
             <div class="options" id="options-${q.id}">
@@ -549,7 +563,91 @@ async function loadAdminExamSelects() {
     } else {
         questionTagCheckboxes.innerHTML = '<p class="hint-text">先に試験を作成してください</p>';
     }
+
+    await loadDeleteExamList(exams);
 }
+
+async function loadDeleteExamList(exams) {
+    if (!exams) {
+        deleteExamList.innerHTML = '<div class="loading">試験を読込中...</div>';
+        const result = await fetchExams();
+        if (!result.ok) {
+            deleteExamList.innerHTML = '<p class="hint-text">読み込みに失敗しました</p>';
+            return;
+        }
+        exams = result.data;
+    }
+
+    if (exams.length === 0) {
+        deleteExamList.innerHTML = '<p class="hint-text">削除できる試験がありません</p>';
+        return;
+    }
+
+    deleteExamList.innerHTML = exams.map(exam => `
+        <div class="delete-exam-item">
+            <div class="delete-exam-info">
+                <p class="delete-exam-title">${escapeHtml(exam.title)}</p>
+                <p class="delete-exam-id">試験ID: ${exam.id}</p>
+            </div>
+            <button type="button" class="btn-danger" onclick="openDeleteExamModal(${exam.id})">削除</button>
+        </div>
+    `).join('');
+}
+
+function openDeleteExamModal(examId) {
+    const exam = currentExams.find(e => e.id === examId);
+    if (!exam) return;
+
+    pendingDeleteExam = exam;
+    deleteExamModalBody.textContent =
+        `「${exam.title}（ID: ${exam.id}）」を削除します。紐づく問題・タグ・解答履歴もすべて削除されます。`;
+    deleteExamModal.hidden = false;
+    deleteExamConfirmBtn.disabled = false;
+}
+
+function closeDeleteExamModal() {
+    deleteExamModal.hidden = true;
+    pendingDeleteExam = null;
+    deleteExamConfirmBtn.disabled = false;
+}
+
+async function confirmDeleteExam() {
+    if (!pendingDeleteExam) return;
+
+    const examId = pendingDeleteExam.id;
+    deleteExamConfirmBtn.disabled = true;
+
+    const result = await deleteExam(examId);
+    if (result.ok) {
+        closeDeleteExamModal();
+        if (currentExamId === examId) {
+            currentExamId = null;
+            currentQuestionIndex = 0;
+            answeredQuestions.clear();
+        }
+        showFormMsg(deleteExamMsg, '試験を削除しました', true);
+        await loadExams();
+        await loadAdminExamSelects();
+    } else {
+        closeDeleteExamModal();
+        showFormMsg(deleteExamMsg, `削除に失敗しました: ${result.error}`, false);
+    }
+}
+
+deleteExamCancelBtn.addEventListener('click', closeDeleteExamModal);
+deleteExamConfirmBtn.addEventListener('click', confirmDeleteExam);
+
+deleteExamModal.addEventListener('click', (e) => {
+    if (e.target === deleteExamModal) {
+        closeDeleteExamModal();
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !deleteExamModal.hidden) {
+        closeDeleteExamModal();
+    }
+});
 
 async function loadQuestionTagCheckboxes(examId) {
     if (!examId) {
