@@ -435,6 +435,31 @@ h1 {
     border-radius: 2px;
 }
 
+.question-drop-actions {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-drop {
+    padding: 0.4rem 0.85rem;
+    background: transparent;
+    color: #a33;
+    border: 1px solid #e0a0a0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s, color 0.2s;
+}
+
+.btn-drop:hover {
+    background: #fff5f5;
+    color: #c82333;
+    border-color: #dc3545;
+}
+
 .next-btn {
     margin-top: 1rem;
 }

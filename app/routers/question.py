@@ -1,5 +1,5 @@
 """
-API endpoints for creating and retrieving questions.
+API endpoints for creating, retrieving, and deleting questions.
 """
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session, joinedload
@@ -193,3 +193,25 @@ def read_questions(
 		return [_question_to_read(q, stats_by_id.get(q.id)) for q in ordered]
 
 	return questions
+
+
+@router.delete("/{question_id}", status_code=204)
+def delete_question(question_id: int, db: Session = Depends(get_db)):
+	question = db.query(models.Question).filter(models.Question.id == question_id).first()
+	if question is None:
+		raise HTTPException(status_code=404, detail="Question not found")
+
+	try:
+		db.query(models.AnswerHistory).filter(
+			models.AnswerHistory.question_id == question_id
+		).delete(synchronize_session=False)
+		db.execute(
+			models.question_tags.delete().where(
+				models.question_tags.c.question_id == question_id
+			)
+		)
+		db.delete(question)
+		db.commit()
+	except Exception:
+		db.rollback()
+		raise

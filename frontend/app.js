@@ -43,6 +43,13 @@ const deleteExamModal = document.getElementById('deleteExamModal');
 const deleteExamModalBody = document.getElementById('deleteExamModalBody');
 const deleteExamCancelBtn = document.getElementById('deleteExamCancelBtn');
 const deleteExamConfirmBtn = document.getElementById('deleteExamConfirmBtn');
+const deleteQuestionModal = document.getElementById('deleteQuestionModal');
+const deleteQuestionModalTitle = document.getElementById('deleteQuestionModalTitle');
+const deleteQuestionModalBody = document.getElementById('deleteQuestionModalBody');
+const deleteQuestionModalWarning = document.getElementById('deleteQuestionModalWarning');
+const deleteQuestionCancelBtn = document.getElementById('deleteQuestionCancelBtn');
+const deleteQuestionNextBtn = document.getElementById('deleteQuestionNextBtn');
+const deleteQuestionConfirmBtn = document.getElementById('deleteQuestionConfirmBtn');
 
 // ==================== State Management ====================
 
@@ -52,6 +59,8 @@ let currentQuestions = [];
 let currentQuestionIndex = 0;
 let answeredQuestions = new Set();
 let pendingDeleteExam = null;
+let pendingDeleteQuestion = null;
+let deleteQuestionStep = 1;
 let isQuestionOverviewOpen = false;
 
 // ==================== Navigation ====================
@@ -232,6 +241,12 @@ async function createExam(title, description) {
 
 async function deleteExam(examId) {
     return apiFetch(`${API_BASE_URL}/exams/${examId}`, {
+        method: 'DELETE',
+    });
+}
+
+async function deleteQuestion(questionId) {
+    return apiFetch(`${API_BASE_URL}/questions/${questionId}`, {
         method: 'DELETE',
     });
 }
@@ -501,6 +516,12 @@ function renderCurrentQuestion() {
                 ` : ''}
                 <button type="button" onclick="nextQuestion()" class="btn-primary next-btn">
                     次の問題へ →
+                </button>
+            </div>
+
+            <div class="question-drop-actions">
+                <button type="button" class="btn-drop" onclick="openDeleteQuestionModal(${q.id})">
+                    この問題をドロップ
                 </button>
             </div>
         </div>
@@ -784,9 +805,114 @@ deleteExamModal.addEventListener('click', (e) => {
     }
 });
 
+function openDeleteQuestionModal(questionId) {
+    const question = currentQuestions.find(q => q.id === questionId);
+    if (!question) return;
+
+    pendingDeleteQuestion = question;
+    deleteQuestionStep = 1;
+    renderDeleteQuestionStep();
+    deleteQuestionModal.hidden = false;
+}
+
+function renderDeleteQuestionStep() {
+    if (!pendingDeleteQuestion) return;
+
+    const titlePreview = pendingDeleteQuestion.title.length > 80
+        ? `${pendingDeleteQuestion.title.slice(0, 80)}…`
+        : pendingDeleteQuestion.title;
+
+    if (deleteQuestionStep === 1) {
+        deleteQuestionModalTitle.textContent = 'この問題をドロップしますか？';
+        deleteQuestionModalBody.textContent =
+            `「${titlePreview}」（問題ID: ${pendingDeleteQuestion.id}）を問題一覧から削除します。`;
+        deleteQuestionModalWarning.hidden = true;
+        deleteQuestionNextBtn.hidden = false;
+        deleteQuestionConfirmBtn.hidden = true;
+        deleteQuestionConfirmBtn.disabled = false;
+    } else {
+        deleteQuestionModalTitle.textContent = '最終確認';
+        deleteQuestionModalBody.textContent =
+            `本当にこの問題を削除しますか？削除後は元に戻せません。`;
+        deleteQuestionModalWarning.hidden = false;
+        deleteQuestionNextBtn.hidden = true;
+        deleteQuestionConfirmBtn.hidden = false;
+        deleteQuestionConfirmBtn.disabled = false;
+    }
+}
+
+function closeDeleteQuestionModal() {
+    deleteQuestionModal.hidden = true;
+    pendingDeleteQuestion = null;
+    deleteQuestionStep = 1;
+    deleteQuestionConfirmBtn.disabled = false;
+}
+
+function advanceDeleteQuestionStep() {
+    if (!pendingDeleteQuestion) return;
+    deleteQuestionStep = 2;
+    renderDeleteQuestionStep();
+}
+
+async function confirmDeleteQuestion() {
+    if (!pendingDeleteQuestion || deleteQuestionStep !== 2) return;
+
+    const questionId = pendingDeleteQuestion.id;
+    deleteQuestionConfirmBtn.disabled = true;
+
+    const result = await deleteQuestion(questionId);
+    if (!result.ok) {
+        closeDeleteQuestionModal();
+        showError(`問題の削除に失敗しました: ${result.error}`);
+        return;
+    }
+
+    closeDeleteQuestionModal();
+    answeredQuestions.delete(questionId);
+    currentQuestions = currentQuestions.filter(q => q.id !== questionId);
+
+    if (currentQuestionIndex >= currentQuestions.length) {
+        currentQuestionIndex = Math.max(0, currentQuestions.length - 1);
+    }
+
+    if (currentExamId) {
+        const statsResult = await fetchStats(currentExamId);
+        if (statsResult.ok && statsResult.data) {
+            renderStatsCard(statsResult.data);
+        }
+    }
+
+    if (currentQuestions.length === 0) {
+        questionList.innerHTML = `
+            <div class="empty-state">
+                <p>この試験には問題がありません。</p>
+                <button type="button" onclick="showScreen('home');" class="btn-secondary">
+                    ホームに戻る
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    renderCurrentQuestion();
+}
+
+deleteQuestionCancelBtn.addEventListener('click', closeDeleteQuestionModal);
+deleteQuestionNextBtn.addEventListener('click', advanceDeleteQuestionStep);
+deleteQuestionConfirmBtn.addEventListener('click', confirmDeleteQuestion);
+
+deleteQuestionModal.addEventListener('click', (e) => {
+    if (e.target === deleteQuestionModal) {
+        closeDeleteQuestionModal();
+    }
+});
+
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !deleteExamModal.hidden) {
         closeDeleteExamModal();
+    }
+    if (e.key === 'Escape' && !deleteQuestionModal.hidden) {
+        closeDeleteQuestionModal();
     }
 });
 
