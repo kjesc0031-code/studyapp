@@ -1,4 +1,4 @@
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Literal
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -55,9 +55,17 @@ class QuestionRead(QuestionBase):
 	id: int
 	created_at: datetime
 	tags: List[TagRead] = []
+	study: Optional["QuestionStudyInfo"] = None
 
 	class Config:
 		from_attributes = True
+
+
+class QuestionStudyInfo(BaseModel):
+	status: Literal["unanswered", "weak", "mastered"]
+	attempt_count: int = 0
+	wrong_count: int = 0
+	last_is_correct: Optional[bool] = None
 
 
 class ImportRowError(BaseModel):

@@ -200,6 +200,84 @@ h1 {
     opacity: 0.9;
 }
 
+.question-overview {
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.question-overview-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #444;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.question-overview-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.question-overview-toggle::before {
+    content: '▶';
+    font-size: 0.7rem;
+    color: #666;
+    transition: transform 0.2s ease;
+}
+
+.question-overview[open] .question-overview-toggle::before {
+    transform: rotate(90deg);
+}
+
+.question-overview-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0 1.25rem 1rem;
+}
+
+.question-overview-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.55rem;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    background: #fafafa;
+    font-size: 0.8rem;
+}
+
+.question-overview-item.is-current {
+    border-color: #0066cc;
+    background: #f0f7ff;
+    box-shadow: 0 0 0 1px #0066cc;
+}
+
+.question-overview-item.is-unanswered {
+    border-color: #b3d4ff;
+}
+
+.question-overview-item.is-weak {
+    border-color: #f5c48a;
+    background: #fff8f0;
+}
+
+.question-overview-num {
+    font-weight: 700;
+    color: #333;
+}
+
+.question-overview .study-badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.45rem;
+}
+
 .question-grid {
     display: grid;
     gap: 1.5rem;
@@ -211,6 +289,55 @@ h1 {
     padding: 1.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     border-left: 4px solid #0066cc;
+}
+
+.question-card.status-unanswered {
+    border-left-color: #0066cc;
+}
+
+.question-card.status-weak {
+    border-left-color: #e67e22;
+}
+
+.question-card.status-mastered {
+    border-left-color: #ccc;
+}
+
+.question-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.study-badge {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+}
+
+.study-badge-unanswered {
+    background: #e8f2ff;
+    color: #0052a3;
+}
+
+.study-badge-weak {
+    background: #fff0e0;
+    color: #b45309;
+}
+
+.study-badge-mastered {
+    background: #e6f7ed;
+    color: #1f7a3f;
+}
+
+.study-detail {
+    font-size: 0.85rem;
+    color: #666;
 }
 
 .question-context {

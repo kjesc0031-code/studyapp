@@ -7,8 +7,35 @@ from typing import Dict, List, Optional
 from app import models, schemas
 from app.csv_import import parse_questions_csv
 from app.database import get_db
+from app.question_order import (
+	QuestionAnswerStats,
+	classify_study_status,
+	fetch_answer_stats,
+	order_questions_for_study,
+)
 
 router = APIRouter()
+
+
+def _question_to_read(
+	question: models.Question,
+	stats: QuestionAnswerStats | None = None,
+) -> schemas.QuestionRead:
+	read = schemas.QuestionRead.model_validate(question)
+	if stats is None:
+		return read
+	return read.model_copy(update={"study": _study_info_from_stats(stats)})
+
+
+def _study_info_from_stats(stats: QuestionAnswerStats | None) -> schemas.QuestionStudyInfo:
+	if stats is None:
+		stats = QuestionAnswerStats()
+	return schemas.QuestionStudyInfo(
+		status=classify_study_status(stats),
+		attempt_count=stats.attempt_count,
+		wrong_count=stats.wrong_count,
+		last_is_correct=stats.last_is_correct,
+	)
 
 
 def _get_tags_for_question(db: Session, exam_id: int, tag_ids: List[int]) -> List[models.Tag]:
@@ -141,6 +168,7 @@ def create_question(
 @router.get("/", response_model=List[schemas.QuestionRead])
 def read_questions(
 	exam_id: Optional[int] = Query(None, description="Exam IDで絞り込み"),
+	order: str = Query("id", description="出題順: id（登録順）または study（学習向け）"),
 	db: Session = Depends(get_db)
 ):
 	if exam_id is not None:
@@ -148,7 +176,20 @@ def read_questions(
 		if exam is None:
 			raise HTTPException(status_code=404, detail="Exam not found")
 
+	if order not in ("id", "study"):
+		raise HTTPException(status_code=400, detail="order must be 'id' or 'study'")
+
 	query = db.query(models.Question).options(joinedload(models.Question.tags))
 	if exam_id is not None:
 		query = query.filter(models.Question.exam_id == exam_id)
-	return query.order_by(models.Question.id).all()
+
+	questions = query.order_by(models.Question.id).all()
+
+	if order == "study":
+		if exam_id is None:
+			raise HTTPException(status_code=400, detail="exam_id is required when order=study")
+		stats_by_id = fetch_answer_stats(db, [q.id for q in questions])
+		ordered = order_questions_for_study(questions, stats_by_id)
+		return [_question_to_read(q, stats_by_id.get(q.id)) for q in ordered]
+
+	return questions

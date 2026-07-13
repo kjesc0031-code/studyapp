@@ -52,6 +52,7 @@ let currentQuestions = [];
 let currentQuestionIndex = 0;
 let answeredQuestions = new Set();
 let pendingDeleteExam = null;
+let isQuestionOverviewOpen = false;
 
 // ==================== Navigation ====================
 
@@ -162,7 +163,7 @@ async function fetchExams() {
 }
 
 async function fetchQuestions(examId) {
-    const result = await apiFetch(`${API_BASE_URL}/questions/?exam_id=${examId}`);
+    const result = await apiFetch(`${API_BASE_URL}/questions/?exam_id=${examId}&order=study`);
     if (!result.ok) {
         showError(`問題の取得に失敗しました: ${result.error}`);
     }
@@ -295,6 +296,7 @@ async function startQuiz(examId) {
     currentExamId = examId;
     currentQuestionIndex = 0;
     answeredQuestions.clear();
+    isQuestionOverviewOpen = false;
 
     const exam = currentExams.find(e => e.id === examId);
     if (!exam) return;
@@ -326,6 +328,116 @@ async function startQuiz(examId) {
     renderCurrentQuestion();
 }
 
+function getStudyStatus(study) {
+    return study?.status ?? 'unanswered';
+}
+
+function renderStudyBadge(study) {
+    const status = getStudyStatus(study);
+    if (status === 'mastered') {
+        return '';
+    }
+
+    const labels = {
+        unanswered: '未回答',
+        weak: '苦手',
+    };
+
+    let detail = '';
+    if (status === 'weak') {
+        detail = `不正解 ${study.wrong_count}回 / ${study.attempt_count}回挑戦`;
+    } else {
+        detail = 'まだ回答していません';
+    }
+
+    const suffix = status === 'weak' ? ` (${study.wrong_count})` : '';
+    return `
+        <span class="study-badge study-badge-${status}" title="${escapeAttr(detail)}">
+            ${labels[status]}${suffix}
+        </span>
+    `;
+}
+
+function renderQuestionOverviewItems(questions, currentIndex) {
+    return questions.map((q, index) => {
+        const status = getStudyStatus(q.study);
+        const isCurrent = index === currentIndex;
+        return `
+            <div class="question-overview-item${isCurrent ? ' is-current' : ''}${status === 'weak' ? ' is-weak' : ''}${status === 'unanswered' ? ' is-unanswered' : ''}">
+                <span class="question-overview-num">Q${index + 1}</span>
+                ${renderStudyBadge(q.study)}
+            </div>
+        `;
+    }).join('');
+}
+
+function getOverviewSummary(questions) {
+    let unanswered = 0;
+    let weak = 0;
+    for (const q of questions) {
+        const status = getStudyStatus(q.study);
+        if (status === 'unanswered') unanswered += 1;
+        else if (status === 'weak') weak += 1;
+    }
+
+    const parts = [];
+    if (unanswered > 0) parts.push(`未回答 ${unanswered}`);
+    if (weak > 0) parts.push(`苦手 ${weak}`);
+    return parts.length > 0 ? `（${parts.join(' / ')}）` : '';
+}
+
+function renderQuestionOverview(questions, currentIndex) {
+    const summary = getOverviewSummary(questions);
+    return `
+        <details class="question-overview"${isQuestionOverviewOpen ? ' open' : ''}>
+            <summary class="question-overview-toggle">
+                問題一覧${summary}
+            </summary>
+            <div class="question-overview-list" id="questionOverviewList">
+                ${renderQuestionOverviewItems(questions, currentIndex)}
+            </div>
+        </details>
+    `;
+}
+
+function bindQuestionOverviewToggle() {
+    const details = document.querySelector('#questionOverview details');
+    if (!details) return;
+
+    details.open = isQuestionOverviewOpen;
+    details.addEventListener('toggle', () => {
+        isQuestionOverviewOpen = details.open;
+    });
+}
+
+function updateQuestionOverview() {
+    const listEl = document.getElementById('questionOverviewList');
+    const summaryEl = document.querySelector('#questionOverview summary');
+    if (!listEl) return;
+
+    listEl.innerHTML = renderQuestionOverviewItems(currentQuestions, currentQuestionIndex);
+    if (summaryEl) {
+        summaryEl.textContent = `問題一覧${getOverviewSummary(currentQuestions)}`;
+    }
+}
+
+function applyAnswerToStudy(study, isCorrect) {
+    const next = {
+        status: study?.status ?? 'unanswered',
+        attempt_count: study?.attempt_count ?? 0,
+        wrong_count: study?.wrong_count ?? 0,
+        last_is_correct: study?.last_is_correct ?? null,
+    };
+
+    next.attempt_count += 1;
+    if (!isCorrect) {
+        next.wrong_count += 1;
+    }
+    next.last_is_correct = isCorrect;
+    next.status = next.wrong_count > 0 ? 'weak' : 'mastered';
+    return next;
+}
+
 function renderStatsCard(stats) {
     const correctRate = (stats.correct_rate * 100).toFixed(1);
     statsCard.innerHTML = `
@@ -347,8 +459,11 @@ function renderCurrentQuestion() {
     const q = currentQuestions[currentQuestionIndex];
     const totalQuestions = currentQuestions.length;
     const currentNum = currentQuestionIndex + 1;
+    const studyStatus = getStudyStatus(q.study);
 
     const questionHTML = `
+        <div id="questionOverview">${renderQuestionOverview(currentQuestions, currentQuestionIndex)}</div>
+
         <div class="quiz-progress">
             <p class="quiz-progress-label">問題 ${currentNum}/${totalQuestions}</p>
             <div class="progress-bar">
@@ -356,7 +471,13 @@ function renderCurrentQuestion() {
             </div>
         </div>
 
-        <div class="question-card">
+        <div class="question-card status-${studyStatus}">
+            <div class="question-card-header">
+                ${renderStudyBadge(q.study)}
+                ${q.study?.status === 'weak' ? `
+                    <span class="study-detail">不正解 ${q.study.wrong_count}回 / ${q.study.attempt_count}回挑戦</span>
+                ` : ''}
+            </div>
             ${q.description ? `<div class="question-context">${escapeHtml(q.description)}</div>` : ''}
             <div class="question-text">${escapeHtml(q.title)}</div>
 
@@ -386,6 +507,7 @@ function renderCurrentQuestion() {
     `;
 
     questionList.innerHTML = questionHTML;
+    bindQuestionOverviewToggle();
 }
 
 async function handleAnswer(questionId, buttonEl) {
@@ -407,6 +529,9 @@ async function handleAnswer(questionId, buttonEl) {
         }
     });
 
+    const q = currentQuestions[currentQuestionIndex];
+    q.study = applyAnswerToStudy(q.study, isCorrect);
+
     if (currentExamId) {
         const statsResult = await fetchStats(currentExamId);
         if (statsResult.ok && statsResult.data) {
@@ -414,7 +539,23 @@ async function handleAnswer(questionId, buttonEl) {
         }
     }
 
-    const q = currentQuestions[currentQuestionIndex];
+    updateQuestionOverview();
+
+    const cardHeader = document.querySelector('.question-card-header');
+    if (cardHeader) {
+        cardHeader.innerHTML = `
+            ${renderStudyBadge(q.study)}
+            ${q.study?.status === 'weak' ? `
+                <span class="study-detail">不正解 ${q.study.wrong_count}回 / ${q.study.attempt_count}回挑戦</span>
+            ` : ''}
+        `;
+    }
+
+    const card = document.querySelector('.question-card');
+    if (card) {
+        card.className = `question-card status-${getStudyStatus(q.study)}`;
+    }
+
     const explanationEl = document.getElementById(`explanation-${q.id}`);
     const feedbackEl = document.getElementById(`feedback-${q.id}`);
 
