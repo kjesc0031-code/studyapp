@@ -301,6 +301,92 @@
 
 
 
+                <section class="admin-form" id="adminQuestionListSection">
+
+                    <h2>問題文一覧</h2>
+
+                    <p class="hint-text">試験ごとの問題文を一覧表示し、同一問題文の重複を確認できます。</p>
+
+                    <div class="form-group">
+
+                        <label for="questionListExamSelect">試験</label>
+
+                        <select id="questionListExamSelect" required></select>
+
+                    </div>
+
+                    <div class="admin-question-list-controls">
+
+                        <button type="button" id="loadAdminQuestionListBtn" class="btn-primary">表示</button>
+
+                        <label class="admin-question-filter-label">
+
+                            <input type="checkbox" id="adminQuestionDuplicatesOnly">
+
+                            重複のみ
+
+                        </label>
+
+                        <input type="search" id="adminQuestionFilterInput" class="admin-question-filter-input" placeholder="問題文で絞り込み" aria-label="問題文で絞り込み">
+
+                    </div>
+
+                    <p id="adminQuestionListSummary" class="admin-question-list-summary" hidden></p>
+
+                    <div id="adminQuestionList" class="admin-question-list">
+
+                        <p class="hint-text">試験を選んで「表示」を押してください</p>
+
+                    </div>
+
+                    <p id="adminQuestionListMsg" class="form-msg" aria-live="polite"></p>
+
+                </section>
+
+
+
+                <section class="admin-form" id="adminQuestionByTagSection">
+
+                    <h2>タグ別問題閲覧</h2>
+
+                    <p class="hint-text">タグで絞り込んで、問題文と選択肢を確認できます。</p>
+
+                    <div class="form-group">
+
+                        <label for="tagBrowseExamSelect">試験</label>
+
+                        <select id="tagBrowseExamSelect" required></select>
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label for="tagBrowseTagSelect">タグ</label>
+
+                        <select id="tagBrowseTagSelect">
+
+                            <option value="">すべて</option>
+
+                        </select>
+
+                    </div>
+
+                    <button type="button" id="loadTagBrowseBtn" class="btn-primary">表示</button>
+
+                    <p id="tagBrowseSummary" class="admin-question-list-summary" hidden></p>
+
+                    <div id="tagBrowseList" class="tag-browse-list">
+
+                        <p class="hint-text">試験を選んで「表示」を押してください</p>
+
+                    </div>
+
+                    <p id="tagBrowseMsg" class="form-msg" aria-live="polite"></p>
+
+                </section>
+
+
+
                 <section class="admin-form admin-form-danger">
 
                     <h2>試験削除</h2>

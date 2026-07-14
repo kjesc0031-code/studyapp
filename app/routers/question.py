@@ -168,6 +168,7 @@ def create_question(
 @router.get("/", response_model=List[schemas.QuestionRead])
 def read_questions(
 	exam_id: Optional[int] = Query(None, description="Exam IDで絞り込み"),
+	tag_id: Optional[int] = Query(None, description="Tag IDで絞り込み"),
 	order: str = Query("id", description="出題順: id（登録順）または study（学習向け）"),
 	db: Session = Depends(get_db)
 ):
@@ -176,12 +177,21 @@ def read_questions(
 		if exam is None:
 			raise HTTPException(status_code=404, detail="Exam not found")
 
+	if tag_id is not None:
+		tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+		if tag is None:
+			raise HTTPException(status_code=404, detail="Tag not found")
+		if exam_id is not None and tag.exam_id != exam_id:
+			raise HTTPException(status_code=400, detail="Tag does not belong to this exam")
+
 	if order not in ("id", "study"):
 		raise HTTPException(status_code=400, detail="order must be 'id' or 'study'")
 
 	query = db.query(models.Question).options(joinedload(models.Question.tags))
 	if exam_id is not None:
 		query = query.filter(models.Question.exam_id == exam_id)
+	if tag_id is not None:
+		query = query.filter(models.Question.tags.any(models.Tag.id == tag_id))
 
 	questions = query.order_by(models.Question.id).all()
 

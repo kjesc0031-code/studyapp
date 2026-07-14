@@ -36,6 +36,19 @@ const refreshExamsBtn = document.getElementById('refreshExamsBtn');
 const tagExamSelect = document.getElementById('tagExamSelect');
 const questionExamSelect = document.getElementById('questionExamSelect');
 const csvExamSelect = document.getElementById('csvExamSelect');
+const questionListExamSelect = document.getElementById('questionListExamSelect');
+const loadAdminQuestionListBtn = document.getElementById('loadAdminQuestionListBtn');
+const adminQuestionDuplicatesOnly = document.getElementById('adminQuestionDuplicatesOnly');
+const adminQuestionFilterInput = document.getElementById('adminQuestionFilterInput');
+const adminQuestionList = document.getElementById('adminQuestionList');
+const adminQuestionListSummary = document.getElementById('adminQuestionListSummary');
+const adminQuestionListMsg = document.getElementById('adminQuestionListMsg');
+const tagBrowseExamSelect = document.getElementById('tagBrowseExamSelect');
+const tagBrowseTagSelect = document.getElementById('tagBrowseTagSelect');
+const loadTagBrowseBtn = document.getElementById('loadTagBrowseBtn');
+const tagBrowseList = document.getElementById('tagBrowseList');
+const tagBrowseSummary = document.getElementById('tagBrowseSummary');
+const tagBrowseMsg = document.getElementById('tagBrowseMsg');
 const questionTagCheckboxes = document.getElementById('questionTagCheckboxes');
 const deleteExamList = document.getElementById('deleteExamList');
 const deleteExamMsg = document.getElementById('deleteExamMsg');
@@ -61,7 +74,12 @@ let answeredQuestions = new Set();
 let pendingDeleteExam = null;
 let pendingDeleteQuestion = null;
 let deleteQuestionStep = 1;
+let deleteQuestionContext = 'quiz';
 let isQuestionOverviewOpen = false;
+let adminQuestions = [];
+let adminQuestionListExamId = null;
+let tagBrowseQuestions = [];
+let tagBrowseExamId = null;
 
 // ==================== Navigation ====================
 
@@ -177,6 +195,14 @@ async function fetchQuestions(examId) {
         showError(`問題の取得に失敗しました: ${result.error}`);
     }
     return result;
+}
+
+async function fetchQuestionsForAdmin(examId, tagId = null) {
+    let url = `${API_BASE_URL}/questions/?exam_id=${examId}&order=id`;
+    if (tagId) {
+        url += `&tag_id=${tagId}`;
+    }
+    return apiFetch(url);
 }
 
 async function fetchStats(examId) {
@@ -700,7 +726,7 @@ async function loadExamStats() {
 
 async function loadAdminExamSelects() {
     const result = await fetchExams();
-    const selects = [tagExamSelect, questionExamSelect, csvExamSelect];
+    const selects = [tagExamSelect, questionExamSelect, csvExamSelect, questionListExamSelect, tagBrowseExamSelect];
 
     if (!result.ok) {
         selects.forEach(sel => {
@@ -722,12 +748,267 @@ async function loadAdminExamSelects() {
 
     if (exams.length > 0) {
         await loadQuestionTagCheckboxes(parseInt(questionExamSelect.value, 10));
+        await loadTagBrowseTagSelect(parseInt(tagBrowseExamSelect.value, 10));
     } else {
         questionTagCheckboxes.innerHTML = '<p class="hint-text">先に試験を作成してください</p>';
+        tagBrowseTagSelect.innerHTML = '<option value="">すべて</option>';
     }
 
     await loadDeleteExamList(exams);
 }
+
+function buildTitleCounts(questions) {
+    const counts = new Map();
+    for (const q of questions) {
+        const key = q.title.trim();
+        counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    return counts;
+}
+
+function getDuplicateStats(questions) {
+    const counts = buildTitleCounts(questions);
+    let duplicateGroups = 0;
+    let duplicateCandidates = 0;
+    for (const count of counts.values()) {
+        if (count >= 2) {
+            duplicateGroups += 1;
+            duplicateCandidates += count;
+        }
+    }
+    return { duplicateGroups, duplicateCandidates };
+}
+
+function renderAdminQuestionListSummary(questions) {
+    const { duplicateGroups, duplicateCandidates } = getDuplicateStats(questions);
+    adminQuestionListSummary.textContent =
+        `全${questions.length}件 / 重複グループ${duplicateGroups} / 重複候補${duplicateCandidates}件`;
+    adminQuestionListSummary.hidden = false;
+}
+
+function renderAdminQuestionListItems() {
+    if (adminQuestionListExamId === null) {
+        adminQuestionList.innerHTML = '<p class="hint-text">試験を選んで「表示」を押してください</p>';
+        adminQuestionListSummary.hidden = true;
+        return;
+    }
+
+    if (adminQuestions.length === 0) {
+        adminQuestionList.innerHTML = '<p class="hint-text">この試験に問題がまだ登録されていません</p>';
+        renderAdminQuestionListSummary([]);
+        return;
+    }
+
+    const titleCounts = buildTitleCounts(adminQuestions);
+    const filterText = adminQuestionFilterInput.value.trim().toLowerCase();
+    const duplicatesOnly = adminQuestionDuplicatesOnly.checked;
+
+    const filtered = adminQuestions.filter(q => {
+        const titleKey = q.title.trim();
+        const isDuplicate = (titleCounts.get(titleKey) || 0) >= 2;
+        if (duplicatesOnly && !isDuplicate) {
+            return false;
+        }
+        if (filterText && !q.title.toLowerCase().includes(filterText)) {
+            return false;
+        }
+        return true;
+    });
+
+    renderAdminQuestionListSummary(adminQuestions);
+
+    if (filtered.length === 0) {
+        adminQuestionList.innerHTML = '<p class="hint-text">条件に一致する問題がありません</p>';
+        return;
+    }
+
+    adminQuestionList.innerHTML = filtered.map(q => {
+        const titleKey = q.title.trim();
+        const isDuplicate = (titleCounts.get(titleKey) || 0) >= 2;
+        return `
+            <div class="admin-question-item${isDuplicate ? ' is-duplicate' : ''}">
+                <span class="admin-question-id">ID ${q.id}</span>
+                <p class="admin-question-title">${escapeHtml(q.title)}</p>
+                <div class="admin-question-actions">
+                    ${isDuplicate ? '<span class="admin-question-duplicate-badge">重複</span>' : ''}
+                    <button type="button" class="btn-danger btn-small" onclick="openDeleteQuestionModal(${q.id}, 'admin')">削除</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function loadAdminQuestionList() {
+    const examId = parseInt(questionListExamSelect.value, 10);
+    if (!examId) {
+        showFormMsg(adminQuestionListMsg, '試験を選択してください', false);
+        return;
+    }
+
+    adminQuestionList.innerHTML = '<div class="loading">読み込み中...</div>';
+    adminQuestionListMsg.textContent = '';
+
+    const result = await fetchQuestionsForAdmin(examId);
+    if (!result.ok) {
+        adminQuestions = [];
+        adminQuestionListExamId = null;
+        adminQuestionList.innerHTML = '<p class="hint-text">読み込みに失敗しました</p>';
+        adminQuestionListSummary.hidden = true;
+        showFormMsg(adminQuestionListMsg, `取得に失敗しました: ${result.error}`, false);
+        return;
+    }
+
+    adminQuestions = result.data;
+    adminQuestionListExamId = examId;
+    renderAdminQuestionListItems();
+}
+
+async function refreshAdminQuestionListIfVisible() {
+    if (adminQuestionListExamId === null) {
+        return;
+    }
+    const examId = parseInt(questionListExamSelect.value, 10);
+    if (examId !== adminQuestionListExamId) {
+        return;
+    }
+    await loadAdminQuestionList();
+}
+
+loadAdminQuestionListBtn.addEventListener('click', () => {
+    loadAdminQuestionList();
+});
+
+adminQuestionDuplicatesOnly.addEventListener('change', () => {
+    if (adminQuestionListExamId !== null) {
+        renderAdminQuestionListItems();
+    }
+});
+
+adminQuestionFilterInput.addEventListener('input', () => {
+    if (adminQuestionListExamId !== null) {
+        renderAdminQuestionListItems();
+    }
+});
+
+function renderTagBrowseChoices(choices, correctAnswer) {
+    if (!choices || choices.length === 0) {
+        return '<p class="hint-text">選択肢なし</p>';
+    }
+    return `<ol class="tag-browse-choices">${choices.map(choice => {
+        const isCorrect = choice === correctAnswer;
+        return `
+            <li class="tag-browse-choice${isCorrect ? ' is-correct' : ''}">
+                ${escapeHtml(choice)}
+                ${isCorrect ? '<span class="tag-browse-correct-label">正答</span>' : ''}
+            </li>
+        `;
+    }).join('')}</ol>`;
+}
+
+function renderTagBrowseItems() {
+    if (tagBrowseExamId === null) {
+        tagBrowseList.innerHTML = '<p class="hint-text">試験を選んで「表示」を押してください</p>';
+        tagBrowseSummary.hidden = true;
+        return;
+    }
+
+    if (tagBrowseQuestions.length === 0) {
+        tagBrowseList.innerHTML = '<p class="hint-text">条件に一致する問題がありません</p>';
+        tagBrowseSummary.textContent = '0件';
+        tagBrowseSummary.hidden = false;
+        return;
+    }
+
+    tagBrowseSummary.textContent = `${tagBrowseQuestions.length}件`;
+    tagBrowseSummary.hidden = false;
+
+    tagBrowseList.innerHTML = tagBrowseQuestions.map(q => `
+        <article class="tag-browse-item">
+            <div class="tag-browse-item-header">
+                <span class="admin-question-id">ID ${q.id}</span>
+                ${q.tags && q.tags.length > 0 ? `
+                    <div class="tag-browse-tags">
+                        ${q.tags.map(tag => `<span class="tag">${escapeHtml(tag.name)}</span>`).join('')}
+                    </div>
+                ` : ''}
+            </div>
+            ${q.description ? `<p class="tag-browse-description">${escapeHtml(q.description)}</p>` : ''}
+            <p class="tag-browse-title">${escapeHtml(q.title)}</p>
+            ${renderTagBrowseChoices(q.choices, q.correct_answer)}
+        </article>
+    `).join('');
+}
+
+async function loadTagBrowseTagSelect(examId) {
+    if (!examId) {
+        tagBrowseTagSelect.innerHTML = '<option value="">すべて</option>';
+        return;
+    }
+
+    const result = await fetchTags(examId);
+    if (!result.ok) {
+        tagBrowseTagSelect.innerHTML = '<option value="">読み込み失敗</option>';
+        return;
+    }
+
+    const tags = result.data;
+    const options = ['<option value="">すべて</option>'];
+    tags.forEach(tag => {
+        options.push(`<option value="${tag.id}">${escapeHtml(tag.name)}</option>`);
+    });
+    tagBrowseTagSelect.innerHTML = options.join('');
+}
+
+async function loadTagBrowseList() {
+    const examId = parseInt(tagBrowseExamSelect.value, 10);
+    if (!examId) {
+        showFormMsg(tagBrowseMsg, '試験を選択してください', false);
+        return;
+    }
+
+    const tagId = tagBrowseTagSelect.value ? parseInt(tagBrowseTagSelect.value, 10) : null;
+
+    tagBrowseList.innerHTML = '<div class="loading">読み込み中...</div>';
+    tagBrowseMsg.textContent = '';
+
+    const result = await fetchQuestionsForAdmin(examId, tagId);
+    if (!result.ok) {
+        tagBrowseQuestions = [];
+        tagBrowseExamId = null;
+        tagBrowseList.innerHTML = '<p class="hint-text">読み込みに失敗しました</p>';
+        tagBrowseSummary.hidden = true;
+        showFormMsg(tagBrowseMsg, `取得に失敗しました: ${result.error}`, false);
+        return;
+    }
+
+    tagBrowseQuestions = result.data;
+    tagBrowseExamId = examId;
+    renderTagBrowseItems();
+}
+
+async function refreshTagBrowseIfVisible() {
+    if (tagBrowseExamId === null) {
+        return;
+    }
+    const examId = parseInt(tagBrowseExamSelect.value, 10);
+    if (examId !== tagBrowseExamId) {
+        return;
+    }
+    await loadTagBrowseList();
+}
+
+tagBrowseExamSelect.addEventListener('change', () => {
+    const examId = parseInt(tagBrowseExamSelect.value, 10);
+    loadTagBrowseTagSelect(examId);
+    tagBrowseQuestions = [];
+    tagBrowseExamId = null;
+    tagBrowseList.innerHTML = '<p class="hint-text">試験を選んで「表示」を押してください</p>';
+    tagBrowseSummary.hidden = true;
+});
+
+loadTagBrowseBtn.addEventListener('click', () => {
+    loadTagBrowseList();
+});
 
 async function loadDeleteExamList(exams) {
     if (!exams) {
@@ -787,6 +1068,18 @@ async function confirmDeleteExam() {
             currentQuestionIndex = 0;
             answeredQuestions.clear();
         }
+        if (adminQuestionListExamId === examId) {
+            adminQuestions = [];
+            adminQuestionListExamId = null;
+            adminQuestionList.innerHTML = '<p class="hint-text">試験を選んで「表示」を押してください</p>';
+            adminQuestionListSummary.hidden = true;
+        }
+        if (tagBrowseExamId === examId) {
+            tagBrowseQuestions = [];
+            tagBrowseExamId = null;
+            tagBrowseList.innerHTML = '<p class="hint-text">試験を選んで「表示」を押してください</p>';
+            tagBrowseSummary.hidden = true;
+        }
         showFormMsg(deleteExamMsg, '試験を削除しました', true);
         await loadExams();
         await loadAdminExamSelects();
@@ -805,11 +1098,13 @@ deleteExamModal.addEventListener('click', (e) => {
     }
 });
 
-function openDeleteQuestionModal(questionId) {
-    const question = currentQuestions.find(q => q.id === questionId);
+function openDeleteQuestionModal(questionId, context = 'quiz') {
+    const question = currentQuestions.find(q => q.id === questionId)
+        || adminQuestions.find(q => q.id === questionId);
     if (!question) return;
 
     pendingDeleteQuestion = question;
+    deleteQuestionContext = context;
     deleteQuestionStep = 1;
     renderDeleteQuestionStep();
     deleteQuestionModal.hidden = false;
@@ -823,7 +1118,9 @@ function renderDeleteQuestionStep() {
         : pendingDeleteQuestion.title;
 
     if (deleteQuestionStep === 1) {
-        deleteQuestionModalTitle.textContent = 'この問題をドロップしますか？';
+        deleteQuestionModalTitle.textContent = deleteQuestionContext === 'admin'
+            ? 'この問題を削除しますか？'
+            : 'この問題をドロップしますか？';
         deleteQuestionModalBody.textContent =
             `「${titlePreview}」（問題ID: ${pendingDeleteQuestion.id}）を問題一覧から削除します。`;
         deleteQuestionModalWarning.hidden = true;
@@ -845,6 +1142,7 @@ function closeDeleteQuestionModal() {
     deleteQuestionModal.hidden = true;
     pendingDeleteQuestion = null;
     deleteQuestionStep = 1;
+    deleteQuestionContext = 'quiz';
     deleteQuestionConfirmBtn.disabled = false;
 }
 
@@ -858,6 +1156,7 @@ async function confirmDeleteQuestion() {
     if (!pendingDeleteQuestion || deleteQuestionStep !== 2) return;
 
     const questionId = pendingDeleteQuestion.id;
+    const context = deleteQuestionContext;
     deleteQuestionConfirmBtn.disabled = true;
 
     const result = await deleteQuestion(questionId);
@@ -870,6 +1169,13 @@ async function confirmDeleteQuestion() {
     closeDeleteQuestionModal();
     answeredQuestions.delete(questionId);
     currentQuestions = currentQuestions.filter(q => q.id !== questionId);
+    adminQuestions = adminQuestions.filter(q => q.id !== questionId);
+
+    if (context === 'admin') {
+        await refreshAdminQuestionListIfVisible();
+        await refreshTagBrowseIfVisible();
+        return;
+    }
 
     if (currentQuestionIndex >= currentQuestions.length) {
         currentQuestionIndex = Math.max(0, currentQuestions.length - 1);
@@ -977,6 +1283,9 @@ tagForm.addEventListener('submit', async (e) => {
         if (parseInt(questionExamSelect.value, 10) === examId) {
             await loadQuestionTagCheckboxes(examId);
         }
+        if (parseInt(tagBrowseExamSelect.value, 10) === examId) {
+            await loadTagBrowseTagSelect(examId);
+        }
     } else {
         showFormMsg(msgEl, `作成に失敗しました: ${result.error}`, false);
     }
@@ -1014,6 +1323,13 @@ questionForm.addEventListener('submit', async (e) => {
         showFormMsg(msgEl, '問題を作成しました', true);
         questionForm.reset();
         await loadQuestionTagCheckboxes(examId);
+        if (parseInt(questionListExamSelect.value, 10) === examId) {
+            await refreshAdminQuestionListIfVisible();
+        }
+        if (parseInt(tagBrowseExamSelect.value, 10) === examId) {
+            await loadTagBrowseTagSelect(examId);
+            await refreshTagBrowseIfVisible();
+        }
     } else {
         showFormMsg(msgEl, `作成に失敗しました: ${result.error}`, false);
     }
@@ -1076,6 +1392,13 @@ csvImportForm.addEventListener('submit', async (e) => {
             csvImportForm.reset();
             if (parseInt(questionExamSelect.value, 10) === examId) {
                 await loadQuestionTagCheckboxes(examId);
+            }
+            if (parseInt(questionListExamSelect.value, 10) === examId) {
+                await refreshAdminQuestionListIfVisible();
+            }
+            if (parseInt(tagBrowseExamSelect.value, 10) === examId) {
+                await loadTagBrowseTagSelect(examId);
+                await refreshTagBrowseIfVisible();
             }
         }
     } else {
