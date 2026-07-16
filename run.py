@@ -20,7 +20,14 @@ def _open_browser(url: str) -> None:
 
 
 def main() -> None:
-	from app.config import API_HOST, API_PORT, RELOAD
+	from app.config import (
+		API_HOST,
+		API_PORT,
+		AUTO_OPEN_BROWSER,
+		RELOAD,
+		RELOAD_DIRS,
+		RELOAD_EXCLUDES,
+	)
 
 	host_label = "localhost" if API_HOST in ("127.0.0.1", "0.0.0.0") else API_HOST
 	url = f"http://{host_label}:{API_PORT}"
@@ -33,11 +40,19 @@ def main() -> None:
 	print("  Stop: Ctrl+C")
 	print("=" * 50)
 
-	threading.Thread(target=_open_browser, args=(url,), daemon=True).start()
+	if AUTO_OPEN_BROWSER:
+		threading.Thread(target=_open_browser, args=(url,), daemon=True).start()
 
 	import uvicorn
 
-	uvicorn.run("app.main:app", host=API_HOST, port=API_PORT, reload=RELOAD)
+	uvicorn.run(
+		"app.main:app",
+		host=API_HOST,
+		port=API_PORT,
+		reload=RELOAD,
+		reload_dirs=RELOAD_DIRS or None,
+		reload_excludes=RELOAD_EXCLUDES or None,
+	)
 
 
 if __name__ == "__main__":

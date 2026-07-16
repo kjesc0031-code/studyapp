@@ -39,6 +39,31 @@ RELOAD: bool = os.getenv(
     "true"
 ).lower() == "true"  # 開発: True, 本番: False（環境変数で設定）
 
+_reload_dirs_str = os.getenv(
+    "RELOAD_DIRS",
+    "app;frontend"
+)
+RELOAD_DIRS: List[str] = [
+    path.strip()
+    for path in _reload_dirs_str.replace(",", ";").split(";")
+    if path.strip()
+]
+
+_reload_excludes_str = os.getenv(
+    "RELOAD_EXCLUDES",
+    ".venv/*;.git/*;*.db;*.sqlite;*.sqlite3;data/*.csv"
+)
+RELOAD_EXCLUDES: List[str] = [
+    pattern.strip()
+    for pattern in _reload_excludes_str.replace(",", ";").split(";")
+    if pattern.strip()
+]
+
+AUTO_OPEN_BROWSER: bool = os.getenv(
+    "AUTO_OPEN_BROWSER",
+    "true"
+).lower() == "true"
+
 # ==================== CORS Configuration ====================
 # コンマ区切りでオリジンを指定、またはJSON形式のリスト
 _cors_origins_str = os.getenv(
