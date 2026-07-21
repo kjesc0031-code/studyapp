@@ -12,6 +12,7 @@ from app.question_order import (
 	classify_study_status,
 	fetch_answer_stats,
 	order_questions_for_study,
+	order_questions_random,
 )
 
 router = APIRouter()
@@ -169,7 +170,10 @@ def create_question(
 def read_questions(
 	exam_id: Optional[int] = Query(None, description="Exam IDで絞り込み"),
 	tag_id: Optional[int] = Query(None, description="Tag IDで絞り込み"),
-	order: str = Query("id", description="出題順: id（登録順）または study（学習向け）"),
+	order: str = Query(
+		"id",
+		description="出題順: id（登録順） / random（ランダム） / study（苦手学習）",
+	),
 	db: Session = Depends(get_db)
 ):
 	if exam_id is not None:
@@ -184,8 +188,8 @@ def read_questions(
 		if exam_id is not None and tag.exam_id != exam_id:
 			raise HTTPException(status_code=400, detail="Tag does not belong to this exam")
 
-	if order not in ("id", "study"):
-		raise HTTPException(status_code=400, detail="order must be 'id' or 'study'")
+	if order not in ("id", "random", "study"):
+		raise HTTPException(status_code=400, detail="order must be 'id', 'random', or 'study'")
 
 	query = db.query(models.Question).options(joinedload(models.Question.tags))
 	if exam_id is not None:
@@ -195,11 +199,17 @@ def read_questions(
 
 	questions = query.order_by(models.Question.id).all()
 
-	if order == "study":
+	if order in ("random", "study"):
 		if exam_id is None:
-			raise HTTPException(status_code=400, detail="exam_id is required when order=study")
+			raise HTTPException(
+				status_code=400,
+				detail=f"exam_id is required when order={order}",
+			)
 		stats_by_id = fetch_answer_stats(db, [q.id for q in questions])
-		ordered = order_questions_for_study(questions, stats_by_id)
+		if order == "study":
+			ordered = order_questions_for_study(questions, stats_by_id)
+		else:
+			ordered = order_questions_random(questions)
 		return [_question_to_read(q, stats_by_id.get(q.id)) for q in ordered]
 
 	return questions

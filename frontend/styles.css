@@ -114,15 +114,9 @@ h1 {
     border-radius: 8px;
     padding: 1.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
     transition: all 0.3s ease;
     border-left: 4px solid #0066cc;
     font-family: inherit;
-}
-
-.exam-card:focus {
-    outline: 2px solid #0066cc;
-    outline-offset: 2px;
 }
 
 .exam-card:hover {
@@ -142,12 +136,19 @@ h1 {
     margin-bottom: 1rem;
 }
 
-.exam-card .click-hint {
-    font-size: 0.85rem;
-    color: #ccc;
+.exam-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid #f0f0f0;
+}
+
+.exam-card-actions .btn-primary,
+.exam-card-actions .btn-secondary {
+    flex: 1 1 auto;
+    min-width: 7.5rem;
 }
 
 /* ==================== Quiz Screen ==================== */
@@ -506,6 +507,7 @@ h1 {
 .explanation-text {
     color: #555;
     font-size: 0.95rem;
+    white-space: pre-wrap;
 }
 
 .tags {

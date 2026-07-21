@@ -67,6 +67,7 @@ const deleteQuestionConfirmBtn = document.getElementById('deleteQuestionConfirmB
 // ==================== State Management ====================
 
 let currentExamId = null;
+let currentStudyMode = 'random'; // 'random' | 'weak'
 let currentExams = [];
 let currentQuestions = [];
 let currentQuestionIndex = 0;
@@ -110,6 +111,7 @@ function showScreen(screen) {
 homeBtn.addEventListener('click', () => {
     showScreen('home');
     currentExamId = null;
+    currentStudyMode = 'random';
     currentQuestionIndex = 0;
     answeredQuestions.clear();
 });
@@ -127,6 +129,7 @@ adminBtn.addEventListener('click', () => {
 backBtn.addEventListener('click', () => {
     showScreen('home');
     currentExamId = null;
+    currentStudyMode = 'random';
     currentQuestionIndex = 0;
     answeredQuestions.clear();
 });
@@ -189,8 +192,9 @@ async function fetchExams() {
     return result;
 }
 
-async function fetchQuestions(examId) {
-    const result = await apiFetch(`${API_BASE_URL}/questions/?exam_id=${examId}&order=study`);
+async function fetchQuestions(examId, studyMode = 'random') {
+    const order = studyMode === 'weak' ? 'study' : 'random';
+    const result = await apiFetch(`${API_BASE_URL}/questions/?exam_id=${examId}&order=${order}`);
     if (!result.ok) {
         showError(`問題の取得に失敗しました: ${result.error}`);
     }
@@ -323,18 +327,26 @@ async function loadExams() {
     }
 
     examList.innerHTML = exams.map(exam => `
-        <button type="button" class="exam-card" onclick="startQuiz(${exam.id})">
+        <div class="exam-card">
             <h2>${escapeHtml(exam.title)}</h2>
             <p class="exam-id">試験ID: ${exam.id}</p>
-            <p class="click-hint">クリックして学習を開始</p>
-        </button>
+            <div class="exam-card-actions">
+                <button type="button" class="btn-primary" onclick="startQuiz(${exam.id}, 'random')">
+                    学習を開始
+                </button>
+                <button type="button" class="btn-secondary" onclick="startQuiz(${exam.id}, 'weak')">
+                    苦手を学習
+                </button>
+            </div>
+        </div>
     `).join('');
 }
 
 // ==================== UI Rendering - Quiz Screen ====================
 
-async function startQuiz(examId) {
+async function startQuiz(examId, studyMode = 'random') {
     currentExamId = examId;
+    currentStudyMode = studyMode === 'weak' ? 'weak' : 'random';
     currentQuestionIndex = 0;
     answeredQuestions.clear();
     isQuestionOverviewOpen = false;
@@ -342,11 +354,13 @@ async function startQuiz(examId) {
     const exam = currentExams.find(e => e.id === examId);
     if (!exam) return;
 
-    examTitle.textContent = exam.title;
+    examTitle.textContent = currentStudyMode === 'weak'
+        ? `${exam.title}（苦手学習）`
+        : exam.title;
     showScreen('quiz');
 
     const [questionsResult, statsResult] = await Promise.all([
-        fetchQuestions(examId),
+        fetchQuestions(examId, currentStudyMode),
         fetchStats(examId),
     ]);
 
@@ -362,7 +376,10 @@ async function startQuiz(examId) {
     }
 
     if (currentQuestions.length === 0) {
-        questionList.innerHTML = '<div class="empty-state">この試験に問題がまだ登録されていません</div>';
+        const emptyMessage = currentStudyMode === 'weak'
+            ? '苦手な問題はまだありません。通常の学習で間違えた問題がここに出ます。'
+            : 'この試験に問題がまだ登録されていません';
+        questionList.innerHTML = `<div class="empty-state">${emptyMessage}</div>`;
         return;
     }
 
@@ -626,7 +643,7 @@ function renderQuizComplete() {
             <h2>すべての問題が完了しました！</h2>
             <p>学習お疲れ様でした。</p>
             <div class="quiz-complete-actions">
-                <button type="button" onclick="startQuiz(${currentExamId})" class="btn-primary">
+                <button type="button" onclick="startQuiz(${currentExamId}, '${currentStudyMode}')" class="btn-primary">
                     もう一度やる
                 </button>
                 <button type="button" onclick="showScreen('home');" class="btn-secondary">

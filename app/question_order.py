@@ -1,5 +1,5 @@
 """
-Study-oriented question ordering based on answer history.
+Question ordering for quiz modes (random / weak-study).
 """
 from __future__ import annotations
 
@@ -119,25 +119,20 @@ def _weak_weight(stats: QuestionAnswerStats) -> float:
 	return weight
 
 
+def order_questions_random(questions: Sequence[Question]) -> List[Question]:
+	return _shuffle(list(questions))
+
+
 def order_questions_for_study(
 	questions: Sequence[Question],
 	stats_by_id: Dict[int, QuestionAnswerStats],
 ) -> List[Question]:
-	unanswered: List[Question] = []
+	"""苦手学習向け: 不正解歴がある問題だけを、不正解が多いほど出やすく並べる。"""
 	weak: List[Question] = []
-	mastered: List[Question] = []
 
 	for question in questions:
 		stats = stats_by_id.get(question.id)
-		if stats is None or stats.attempt_count == 0:
-			unanswered.append(question)
-		elif stats.wrong_count > 0:
+		if stats is not None and stats.wrong_count > 0:
 			weak.append(question)
-		else:
-			mastered.append(question)
 
-	return (
-		_shuffle(unanswered)
-		+ _weighted_shuffle(weak, lambda q: _weak_weight(stats_by_id[q.id]))
-		+ _shuffle(mastered)
-	)
+	return _weighted_shuffle(weak, lambda q: _weak_weight(stats_by_id[q.id]))
